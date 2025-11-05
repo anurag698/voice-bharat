@@ -2,6 +2,7 @@ import { Controller, Get, Put, Post, Delete, Param, Body, Query, UseGuards, Requ
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateProfileDto } from './dto/user.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -23,9 +24,8 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   async updateProfile(
     @Request() req,
-    @Body() body: { firstName?: string; lastName?: string; bio?: string; avatar?: string },
-  ) {
-    return this.userService.updateProfile(req.user.sub, body);
+    @Body() updateProfileDto: UpdateProfileDto,  ) {
+    return this.userService.updateProfile(req.user.sub, updateProfileDto);
   }
 
   @Post(':id/follow')
