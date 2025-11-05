@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: voch-postgres
+    environment:
+      POSTGRES_USER: vochuser
+      POSTGRES_PASSWORD: vochpass
+      POSTGRES_DB: vochdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - voch-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: voch-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - voch-network
+
+  # MongoDB for Messages
+  mongodb:
+    image: mongo:7
+    container_name: voch-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: vochuser
+      MONGO_INITDB_ROOT_PASSWORD: vochpass
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - voch-network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
+networks:
+  voch-network:
+    driver: bridge
