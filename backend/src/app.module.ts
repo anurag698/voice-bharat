@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { PostModule } from './post/post.module';
 import { PollModule } from './poll/poll.module';
 import { NgoModule } from './ngo/ngo.module';
+import { MessageModule } from './message/message.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NgoModule } from './ngo/ngo.module';
         PostModule,
         PollModule,
         NgoModule,
+        MessageModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
