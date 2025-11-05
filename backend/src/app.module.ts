@@ -5,6 +5,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { UserModule } from './user/user.module';
 import { PostModule } from './post/post.module';
 import { PollModule } from './poll/poll.module';
+import { NgoModule } from './ngo/ngo.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PollModule } from './poll/poll.module';
         UserModule,
         PostModule,
         PollModule,
+        NgoModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
