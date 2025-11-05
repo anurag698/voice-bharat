@@ -1,0 +1,421 @@
+// Prisma Schema Template for VOCH Platform
+// Copy this to backend/prisma/schema.prisma and customize as needed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  fullName      String
+  bio           String?
+  profilePicUrl String?
+  phoneNumber   String?
+  language      String   @default("en")
+  location      String?
+  verified      Boolean  @default(false)
+  
+  // Gamification
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  streak        Int      @default(0)
+  lastActive    DateTime @default(now())
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  polls         Poll[]
+  pollVotes     PollVote[]
+  followers     Follow[]  @relation("UserFollowers")
+  following     Follow[]  @relation("UserFollowing")
+  friends       Friend[]  @relation("UserFriends")
+  friendOf      Friend[]  @relation("FriendOf")
+  badges        UserBadge[]
+  donations     Donation[]
+  ngoFollows    NGOFollow[]
+  notifications Notification[]
+  reports       Report[]
+  
+  @@index([email])
+  @@index([username])
+}
+
+// ============================================
+// CONTENT & SOCIAL FEATURES
+// ============================================
+
+model Post {
+  id          String    @id @default(uuid())
+  content     String
+  mediaUrls   String[]  @default([])
+  mediaType   String?   // "image", "video", "audio"
+  visibility  String    @default("public") // "public", "friends", "private"
+  language    String    @default("en")
+  
+  // Engagement metrics
+  likesCount  Int       @default(0)
+  commentsCount Int     @default(0)
+  sharesCount Int       @default(0)
+  
+  // Author
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  comments    Comment[]
+  likes       Like[]
+  tags        PostTag[]
+  
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id          String   @id @default(uuid())
+  content     String
+  
+  // Relations
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  parentId    String?
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model PostTag {
+  id        String   @id @default(uuid())
+  name      String
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([name])
+  @@index([postId])
+}
+
+// ============================================
+// POLLING & VOTING
+// ============================================
+
+model Poll {
+  id          String     @id @default(uuid())
+  question    String
+  description String?
+  mediaUrl    String?
+  category    String?
+  isActive    Boolean    @default(true)
+  
+  // Duration
+  startDate   DateTime   @default(now())
+  endDate     DateTime
+  
+  // Creator
+  creatorId   String
+  creator     User       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  options     PollOption[]
+  votes       PollVote[]
+  
+  @@index([creatorId])
+  @@index([isActive])
+  @@index([endDate])
+}
+
+model PollOption {
+  id          String     @id @default(uuid())
+  text        String
+  votesCount  Int        @default(0)
+  
+  pollId      String
+  poll        Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  
+  votes       PollVote[]
+  
+  @@index([pollId])
+}
+
+model PollVote {
+  id        String     @id @default(uuid())
+  
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  pollId    String
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  
+  optionId  String
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime   @default(now())
+  
+  @@unique([userId, pollId])
+  @@index([pollId])
+}
+
+// ============================================
+// SOCIAL CONNECTIONS
+// ============================================
+
+model Follow {
+  id          String   @id @default(uuid())
+  
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Friend {
+  id        String   @id @default(uuid())
+  status    String   @default("pending") // "pending", "accepted", "blocked"
+  
+  userId    String
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  
+  friendId  String
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+// ============================================
+// NGO & FUNDRAISING
+// ============================================
+
+model NGO {
+  id            String        @id @default(uuid())
+  name          String
+  description   String
+  logoUrl       String?
+  website       String?
+  email         String?
+  phone         String?
+  address       String?
+  verified      Boolean       @default(false)
+  category      String?
+  
+  // Social metrics
+  followersCount Int          @default(0)
+  
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  fundraisers   Fundraiser[]
+  followers     NGOFollow[]
+  
+  @@index([verified])
+  @@index([category])
+}
+
+model NGOFollow {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  ngoId     String
+  ngo       NGO      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, ngoId])
+  @@index([ngoId])
+}
+
+model Fundraiser {
+  id            String     @id @default(uuid())
+  title         String
+  description   String
+  imageUrl      String?
+  goalAmount    Float
+  currentAmount Float      @default(0)
+  currency      String     @default("INR")
+  category      String?
+  isActive      Boolean    @default(true)
+  
+  // Duration
+  startDate     DateTime   @default(now())
+  endDate       DateTime
+  
+  // NGO
+  ngoId         String
+  ngo           NGO        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  // Relations
+  donations     Donation[]
+  
+  @@index([ngoId])
+  @@index([isActive])
+}
+
+model Donation {
+  id            String     @id @default(uuid())
+  amount        Float
+  currency      String     @default("INR")
+  paymentId     String?    @unique
+  status        String     @default("pending") // "pending", "completed", "failed"
+  
+  // Donor
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Fundraiser
+  fundraiserId  String
+  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime   @default(now())
+  
+  @@index([userId])
+  @@index([fundraiserId])
+  @@index([status])
+}
+
+// ============================================
+// GAMIFICATION
+// ============================================
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  iconUrl     String
+  category    String      // "engagement", "social", "civic", "donation"
+  xpRequired  Int
+  
+  createdAt   DateTime    @default(now())
+  
+  users       UserBadge[]
+  
+  @@index([category])
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  
+  earnedAt  DateTime @default(now())
+  
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   // "like", "comment", "follow", "poll", "badge"
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  data      Json?    // Additional metadata
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// ============================================
+// MODERATION
+// ============================================
+
+model Report {
+  id          String   @id @default(uuid())
+  reason      String
+  description String?
+  status      String   @default("pending") // "pending", "reviewed", "resolved"
+  
+  // Reporter
+  reporterId  String
+  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  // Reported content
+  contentType String   // "post", "comment", "user", "poll"
+  contentId   String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([status])
+  @@index([contentType, contentId])
+}
