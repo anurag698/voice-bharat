@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Requ
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PostService } from './post.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { MediaType } from '@prisma/client';
+import { CreatePostDto, UpdatePostDto, CreateCommentDto } from './dto/post.dto';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -37,9 +37,9 @@ export class PostController {
   @ApiResponse({ status: 201, description: 'Post created successfully' })
   async createPost(
     @Request() req,
-    @Body() body: { content: string; mediaUrls?: string[]; mediaType?: MediaType },
+    @Body() createPostDto: CreatePostDto,
   ) {
-    return this.postService.createPost(req.user.sub, body);
+    return this.postService.createPost(req.user.sub, createPostDto);
   }
 
   @Put(':id')
@@ -51,9 +51,9 @@ export class PostController {
   async updatePost(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { content: string },
+    @Body() updatePostDto: UpdatePostDto,
   ) {
-    return this.postService.updatePost(id, req.user.sub, body);
+    return this.postService.updatePost(id, req.user.sub, updatePostDto);
   }
 
   @Delete(':id')
@@ -83,8 +83,8 @@ export class PostController {
   async addComment(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { content: string },
+    @Body() createCommentDto: CreateCommentDto,
   ) {
-    return this.postService.addComment(id, req.user.sub, body.content);
+    return this.postService.addComment(id, req.user.sub, createCommentDto.content);
   }
 }
