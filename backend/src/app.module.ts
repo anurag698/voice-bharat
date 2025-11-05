@@ -7,6 +7,7 @@ import { PostModule } from './post/post.module';
 import { PollModule } from './poll/poll.module';
 import { NgoModule } from './ngo/ngo.module';
 import { MessageModule } from './message/message.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { MessageModule } from './message/message.module';
         PollModule,
         NgoModule,
         MessageModule,
+        NotificationModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
