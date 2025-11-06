@@ -52,6 +52,8 @@ model User {
   notifications Notification[]
   followers     Follow[]  @relation("UserFollowers")
   following     Follow[]  @relation("UserFollowing")
+  reels       Reel[]
+  activities  Activity[]
   
   @@index([email])
   @@index([username])
@@ -300,4 +302,208 @@ enum NotificationType {
   BADGE_EARNED
   LEVEL_UP
   MESSAGE
+}
+
+// Reel Model (Short Videos)
+model Reel {
+  id String @id @default(uuid())
+  userId String
+  caption String?
+  videoUrl String
+  thumbnailUrl String
+  duration Int // in seconds
+  viewsCount Int @default(0)
+  likesCount Int @default(0)
+  commentsCount Int @default(0)
+  sharesCount Int @default(0)
+  soundUrl String?
+  hashtags String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes ReelLike[]
+  comments ReelComment[]
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Reel Like Model
+model ReelLike {
+  id String @id @default(uuid())
+  reelId String
+  userId String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  reel Reel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  
+  @@unique([reelId, userId])
+  @@index([reelId])
+}
+
+// Reel Comment Model
+model ReelComment {
+  id String @id @default(uuid())
+  reelId String
+  userId String
+  content String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  reel Reel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  
+  @@index([reelId])
+  @@index([userId])
+}
+
+// Friend Model (Mutual Connection)
+model Friend {
+  id String @id @default(uuid())
+  userId String
+  friendId String
+  status FriendStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  acceptedAt DateTime?
+  
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+// Badge Model (Gamification)
+model Badge {
+  id String @id @default(uuid())
+  name String @unique
+  description String
+  icon String
+  type BadgeType
+  requirement Json // Criteria to earn badge
+  xpReward Int @default(0)
+  createdAt DateTime @default(now())
+}
+
+enum BadgeType {
+  EARLY_ADOPTER
+  TOP_SUPPORTER
+  POLL_MASTER
+  CAUSE_CHAMPION
+  CITY_VOICE
+  CONTENT_CREATOR
+  INFLUENCER
+  VERIFIED_CREATOR
+}
+
+// User Activity Log (for XP calculation)
+model Activity {
+  id String @id @default(uuid())
+  userId String
+  type ActivityType
+  xpEarned Int @default(0)
+  metadata Json?
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  LOGIN
+  POST_CREATED
+  COMMENT_ADDED
+  POLL_CREATED
+  POLL_VOTED
+  REEL_UPLOADED
+  FUNDRAISER_SUPPORTED
+  POST_SHARED
+  MILESTONE_REACHED
+}
+
+// Share Model
+model Share {
+  id String @id @default(uuid())
+  userId String
+  postId String?
+  reelId String?
+  fundraiserId String?
+  sharedTo String? // Platform: WhatsApp, Twitter, etc.
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([postId])
+  @@index([createdAt])
+}
+
+// Report Model (Content Moderation)
+model Report {
+  id String @id @default(uuid())
+  reporterId String
+  reportedUserId String?
+  postId String?
+  reelId String?
+  commentId String?
+  reason ReportReason
+  description String?
+  status ReportStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  
+  @@index([reporterId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  VIOLENCE
+  MISINFORMATION
+  NUDITY
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  ACTIONED
+  DISMISSED
+}
+
+// Hashtag Model
+model Hashtag {
+  id String @id @default(uuid())
+  tag String @unique
+  usageCount Int @default(0)
+  trendingScore Float @default(0)
+  lastUsedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  @@index([tag])
+  @@index([trendingScore])
+}
+
+// Mention Model
+model Mention {
+  id String @id @default(uuid())
+  postId String?
+  reelId String?
+  commentId String?
+  mentionedUserId String
+  mentionedByUserId String
+  createdAt DateTime @default(now())
+  
+  @@index([mentionedUserId])
+  @@index([postId])
 }
