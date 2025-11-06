@@ -118,6 +118,7 @@ model Comment {
   content   String
   parentId        String?           // For nested/threaded comments
   repliesCount    Int      @default(0)
+  reactionsCount Int @default(0)  // Total number of reactions
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -126,6 +127,7 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies     Comment[] @relation("CommentReplies")
+  reactions   CommentReaction[]
   
   @@index([postId])
   @@index([userId])
@@ -146,6 +148,34 @@ model Like {
   @@unique([postId, userId])
   @@index([postId])
   @@index([userId])
+}
+
+// Comment Reaction Model
+model CommentReaction {
+  id        String       @id @default(uuid())
+  commentId String
+  userId    String
+  type      ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+
+  // Relations
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, type])
+  @@index([commentId])
+  @@index([userId])
+}
+
+// Reaction Type Enum
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+  CELEBRATE
+  SUPPORT
 }
 
 // Poll Model
