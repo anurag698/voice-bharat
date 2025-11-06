@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# Cache
+.turbo
+.cache
+.parcel-cache
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs
+
+# Database
+prisma/migrations
+*.db
+*.sqlite
+
+# Generated files
+.prisma/client
+
+# Testing
+coverage
+.nyc_output
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Misc
+public/sw.js
+public/workbox-*.js
