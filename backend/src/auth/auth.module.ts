@@ -13,6 +13,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { UserProfileService } from './user-profile.service';
 import { UploadService } from './upload.service';
+import { TokenValidationService } from './token-validation.service';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { UploadService } from './upload.service';
     PasswordResetService,
     UserProfileService,
     UploadService,
+                  TokenValidationService,
     PrismaService],
   exports: [AuthService, JwtModule],
 })
