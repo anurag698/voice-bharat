@@ -12,6 +12,7 @@ import { FeedModule } from './feed/feed.module';
 import { CommentModule } from './comment/comment.module';
 import { LikeModule } from './like/like.module';
 import { FollowModule } from './follow/follow.module';
+import { ReelModule } from './reel/reel.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { FollowModule } from './follow/follow.module';
         CommentModule,
         LikeModule,
         FollowModule,
+        ReelModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
