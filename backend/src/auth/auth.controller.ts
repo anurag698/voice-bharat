@@ -11,6 +11,7 @@ import { UserProfileService } from './user-profile.service';
 import { UploadService } from './upload.service';
 import { TokenValidationService } from './token-validation.service';
 import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
+import { SignupDto, LoginDto } from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -27,16 +28,9 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   @ApiResponse({ status: 400, description: 'Email or username already exists' })
   async signup(
-    @Body()
-    body: {
-      email: string;
-      password: string;
-      username: string;
-      firstName: string;
-      lastName: string;
-    },
+    @Body() signupDto: SignupDto,
   ) {
-    return this.authService.signup(body);
+    return this.authService.signup(signupDto);
   }
 
   @Post('login')
@@ -44,11 +38,9 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
-    @Body() body: { email: string; password: string },
-  ) {
-    return this.authService.login(body.email, body.password);
+    @Body() loginDto: LoginDto,
+    return this.authService.login(loginDto.email, loginDto.password);
   }
-
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   @ApiResponse({ status: 200, description: 'New access token generated' })
