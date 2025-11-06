@@ -28,6 +28,13 @@ model User {
   xp            Int      @default(0)
   badges        Json?    // Array of earned badges
   interests     String[] // Tags for interests
+
+  // Privacy Settings
+  isPublic                        Boolean  @default(true)  // Is profile public
+  showEmail                       Boolean  @default(false) // Show email to others
+  showPhone                       Boolean  @default(false) // Show phone to others
+  allowMessagesFromNonFollowers   Boolean  @default(true)  // Allow messages from non-followers
+  showActivityStatus              Boolean  @default(true)  // Show activity status
   
   // OAuth fields
   googleId      String?  @unique
