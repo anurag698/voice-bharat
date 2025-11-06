@@ -4,13 +4,15 @@ import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UserProfileService } from './user-profile.service';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService),
     private emailVerificationService: EmailVerificationService {},
-    private passwordResetService: PasswordResetService
+    private passwordResetService: PasswordResetService,
+          private userProfileService: UserProfileService
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
@@ -115,5 +117,82 @@ export class AuthController {
       body.currentPassword,
       body.newPassword,
     );
+  }
+
+  // ============ User Profile Management ============
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get authenticated user profile' })
+  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Request() req) {
+    return this.userProfileService.getProfile(req.user.sub);
+  }
+
+  @Get('profile/public/:username')
+  @ApiOperation({ summary: 'Get public user profile by username' })
+  @ApiResponse({ status: 200, description: 'Public profile retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getPublicProfile(@Request() req) {
+    const authenticatedUserId = req.user?.sub;
+    const { username } = req.params;
+    return this.userProfileService.getPublicProfile(username, authenticatedUserId);
+  }
+
+  @Post('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or username/email already exists' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @Request() req,
+    @Body() updateProfileDto: any,
+  ) {
+    return this.userProfileService.updateProfile(req.user.sub, updateProfileDto);
+  }
+
+  @Get('profile/privacy')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get privacy settings' })
+  @ApiResponse({ status: 200, description: 'Privacy settings retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getPrivacySettings(@Request() req) {
+    return this.userProfileService.getPrivacySettings(req.user.sub);
+  }
+
+  @Post('profile/privacy')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update privacy settings' })
+  @ApiResponse({ status: 200, description: 'Privacy settings updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updatePrivacySettings(
+    @Request() req,
+    @Body() updatePrivacySettingsDto: any,
+  ) {
+    return this.userProfileService.updatePrivacySettings(req.user.sub, updatePrivacySettingsDto);
+  }
+
+  @Post('profile/delete')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete user account' })
+  @ApiResponse({ status: 200, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async deleteAccount(@Request() req) {
+    return this.userProfileService.deleteAccount(req.user.sub);
+  }
+
+  @Get('users/search')
+  @ApiOperation({ summary: 'Search users by username or name' })
+  @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
+  async searchUsers(@Request() req) {
+    const { query, limit = 20, offset = 0 } = req.query;
+    return this.userProfileService.searchUsers(query as string, Number(limit), Number(offset));
   }
 }
