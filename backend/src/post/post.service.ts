@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaType } from '@prisma/client';
+import { HashtagService } from './hashtag.service';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private hashtagService: HashtagService) {}
 
   async getFeed(userId: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
@@ -102,6 +103,9 @@ export class PostService {
     mediaUrls?: string[];
     mediaType?: MediaType;
   }) {
+        // Extract hashtags from content for processing
+        const hashtags = this.hashtagService.extractHashtags(data.content);
+    
     const post = await this.prisma.post.create({
       data: {
         content: data.content,
@@ -121,6 +125,14 @@ export class PostService {
         },
       },
     });
+
+        // Process hashtags asynchronously (non-blocking)
+        if (hashtags.length > 0) {
+                this.hashtagService.processHashtags(hashtags).catch((err) => {
+                          // Log error but don't fail post creation
+                          console.error('Failed to process hashtags:', err);
+                        });
+              }
 
     // Award XP for creating post
     await this.prisma.user.update({
