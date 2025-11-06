@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MediaType } from '@prisma/client';
+import { MediaType, ReactionType } from '@prisma/client';
 import { HashtagService } from './hashtag.service';
 
 @Injectable()
@@ -245,6 +245,134 @@ export class PostService {
       },
     });
 
-    return comment;
+   
+    
+      // Post Reaction Methods
+  async addPostReaction(
+    postId: string,
+    userId: string,
+    type: ReactionType,
+  ): Promise<{ message: string }> {
+    // Verify post exists
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Check if reaction already exists
+    const existingReaction = await this.prisma.postReaction.findUnique({
+      where: {
+        postId_userId_type: {
+          postId,
+          userId,
+          type,
+        },
+      },
+    });
+
+    if (existingReaction) {
+      // Remove reaction (toggle off)
+      await this.prisma.$transaction([
+        this.prisma.postReaction.delete({
+          where: { id: existingReaction.id },
+        }),
+        this.prisma.post.update({
+          where: { id: postId },
+          data: { reactionsCount: { decrement: 1 } },
+        }),
+      ]);
+
+      return { message: 'Reaction removed' };
+    }
+
+    // Add new reaction
+    await this.prisma.$transaction([
+      this.prisma.postReaction.create({
+        data: {
+          postId,
+          userId,
+          type,
+        },
+      }),
+      this.prisma.post.update({
+        where: { id: postId },
+        data: { reactionsCount: { increment: 1 } },
+      }),
+    ]);
+
+    return { message: 'Reaction added' };
+  }
+
+  async getPostReactions(postId: string) {
+    // Verify post exists
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Get all reactions grouped by type
+    const reactions = await this.prisma.postReaction.findMany({
+      where: { postId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Group reactions by type
+    const groupedReactions = reactions.reduce(
+      (acc, reaction) => {
+        const existing = acc.find((r) => r.type === reaction.type);
+        if (existing) {
+          existing.count++;
+          existing.users.push(reaction.user);
+        } else {
+          acc.push({
+            type: reaction.type,
+            count: 1,
+            users: [reaction.user],
+          });
+        }
+        return acc;
+      },
+      [] as Array<{
+        type: ReactionType;
+        count: number;
+        users: Array<{ id: string; username: string; avatar: string | null }>;
+      }>,
+    );
+
+    return groupedReactions;
+  }
+
+  async getUserPostReaction(
+    postId: string,
+    userId: string,
+  ): Promise<ReactionType[]> {
+    // Get all reaction types the user has added to this post
+    const reactions = await this.prisma.postReaction.findMany({
+      where: {
+        postId,
+        userId,
+      },
+      select: {
+        type: true,
+      },
+    });
+
+    return reactions.map((r) => r.type);
+  }return comment;
   }
 }
