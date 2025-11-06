@@ -5,6 +5,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
+import { FacebookOAuthGuard } from './guards/facebook-oauth.guard';
 import { UserProfileService } from './user-profile.service';
 import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
 
@@ -217,5 +218,26 @@ export class AuthController {
     // req.user contains the user data from Google
     // Process the OAuth user and return JWT tokens
     return this.authService.validateOAuthLogin(req.user, 'google');
+  }
+
+  // ============ Facebook OAuth =============
+
+  @Get('facebook')
+  @UseGuards(FacebookOAuthGuard)
+  @ApiOperation({ summary: 'Initiate Facebook OAuth flow' })
+  @ApiResponse({ status: 302, description: 'Redirect to Facebook OAuth' })
+  async facebookAuth() {
+    // Guard redirects to Facebook
+  }
+
+  @Get('facebook/callback')
+  @UseGuards(FacebookOAuthGuard)
+  @ApiOperation({ summary: 'Facebook OAuth callback' })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 401, description: 'Authentication failed' })
+  async facebookAuthCallback(@Request() req) {
+    // req.user contains the user data from Facebook
+    // Process the OAuth user and return JWT tokens
+    return this.authService.validateOAuthLogin(req.user, 'facebook');
   }
 }
