@@ -1,5 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, Post, Get, Body, UseGuards, Request, UnauthorizedException } from '@nestjs/common';import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -10,6 +9,7 @@ import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { FacebookOAuthGuard } from './guards/facebook-oauth.guard';
 import { UserProfileService } from './user-profile.service';
 import { UploadService } from './upload.service';
+import { TokenValidationService } from './token-validation.service';
 import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
 
 @ApiTags('auth')
@@ -20,6 +20,7 @@ export class AuthController {
     private passwordResetService: PasswordResetService,
           private userProfileService: UserProfileService,
               private uploadService: UploadService
+            private tokenValidationService: TokenValidationService
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
@@ -46,6 +47,43 @@ export class AuthController {
     @Body() body: { email: string; password: string },
   ) {
     return this.authService.login(body.email, body.password);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({ status: 200, description: 'New access token generated' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  async refresh(
+    @Body() body: { refreshToken: string },
+  ) {
+    // Validate the refresh token
+    const validationResult = await this.tokenValidationService.validateRefreshToken(
+      body.refreshToken,
+    );
+
+    if (!validationResult.valid) {
+      throw new UnauthorizedException(
+        validationResult.error || 'Invalid or expired refresh token',
+      );
+    }
+
+    // Generate new access token
+    const newAccessToken = await this.tokenValidationService.generateAccessToken(
+      validationResult.userId!,
+      validationResult.email!,
+    );
+
+    // Optionally generate new refresh token (token rotation)
+    const newRefreshToken = await this.tokenValidationService.generateRefreshToken(
+      validationResult.userId!,
+      validationResult.email!,
+    );
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: '7d',
+    };
   }
 
   @Get('profile')
