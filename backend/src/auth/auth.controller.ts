@@ -5,6 +5,7 @@ import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserProfileService } from './user-profile.service';
+import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -150,7 +151,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateProfile(
     @Request() req,
-    @Body() updateProfileDto: any,
+    @Body() updateProfileDto: UpdateProfileDto,
   ) {
     return this.userProfileService.updateProfile(req.user.sub, updateProfileDto);
   }
@@ -173,7 +174,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updatePrivacySettings(
     @Request() req,
-    @Body() updatePrivacySettingsDto: any,
+    @Body() updatePrivacySettingsDto: UpdatePrivacySettingsDto,
   ) {
     return this.userProfileService.updatePrivacySettings(req.user.sub, updatePrivacySettingsDto);
   }
