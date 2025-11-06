@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Requ
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PostService } from './post.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreatePostDto, UpdatePostDto, CreateCommentDto, AddPostReactionDto } from './dto/post.dto';
+import { CreatePostDto, UpdatePostDto, CreateCommentDto, AddPostReactionDto, ReactionType } from './dto/post.dto';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -72,8 +72,7 @@ export class PostController {
   @ApiOperation({ summary: 'Like/unlike post' })
   @ApiResponse({ status: 200, description: 'Post liked/unliked' })
   async likePost(@Request() req, @Param('id') id: string) {
-    return this.postService.likePost(id, req.user.sub);
-  }
+    return this.postService.addPostReaction(id, req.user.sub, ReactionType.LIKE);  }
 
   @Post(':id/comment')
   @UseGuards(JwtAuthGuard)
