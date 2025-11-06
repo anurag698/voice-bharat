@@ -9,6 +9,7 @@ import { NgoModule } from './ngo/ngo.module';
 import { MessageModule } from './message/message.module';
 import { NotificationModule } from './notification/notification.module';
 import { FeedModule } from './feed/feed.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { FeedModule } from './feed/feed.module';
         MessageModule,
         NotificationModule,
         FeedModule,
+        CommentModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
