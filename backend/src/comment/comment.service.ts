@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CreateCommentDto {
   postId: string;
   content: string;
+    parentId?: string;  // Optional: for nested/threaded comments
 }
 
 export class UpdateCommentDto {
@@ -16,6 +17,8 @@ export class CommentResponseDto {
   postId: string;
   userId: string;
   content: string;
+    parentId: string | null;  // Parent comment ID for nested comments
+  repliesCount: number;  // Number of replies to this comment
   createdAt: Date;
   updatedAt: Date;
   user: {
@@ -59,12 +62,29 @@ export class CommentService {
       throw new NotFoundException('Post not found');
     }
 
+        // If parentId is provided, validate parent comment exists
+    if (createCommentDto.parentId) {
+      const parentComment = await this.prisma.comment.findUnique({
+        where: { id: createCommentDto.parentId },
+      });
+
+      if (!parentComment) {
+        throw new NotFoundException('Parent comment not found');
+      }
+
+      // Ensure parent comment belongs to the same post
+      if (parentComment.postId !== postId) {
+        throw new BadRequestException('Parent comment must belong to the same post');
+      }
+    }
+
     // Create comment
     const comment = await this.prisma.comment.create({
       data: {
         userId,
         postId,
         content: content.trim(),
+              ...(createCommentDto.parentId && { parentId: createCommentDto.parentId }),
       },
       include: {
         user: {
@@ -84,6 +104,14 @@ export class CommentService {
       where: { id: postId },
       data: { commentsCount: { increment: 1 } },
     });
+
+        // If this is a reply, increment parent comment's repliesCount
+    if (createCommentDto.parentId) {
+      await this.prisma.comment.update({
+        where: { id: createCommentDto.parentId },
+        data: { repliesCount: { increment: 1 } },
+      });
+    }
 
     // TODO: Create notification for post owner
     // TODO: Award XP for commenting (e.g., 3 XP)
@@ -300,6 +328,14 @@ export class CommentService {
       data: { commentsCount: { decrement: 1 } },
     });
 
+        // If this comment is a reply, decrement parent's repliesCount
+    if (comment.parentId) {
+      await this.prisma.comment.update({
+        where: { id: comment.parentId },
+        data: { repliesCount: { decrement: 1 } },
+      });
+    }
+
     return { message: 'Comment deleted successfully' };
   }
 
@@ -324,5 +360,60 @@ export class CommentService {
     });
 
     return !!comment;
+  }
+
+    /**
+   * Get all replies to a specific comment (threaded comments)
+   */
+  async getCommentReplies(
+    commentId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ replies: CommentResponseDto[]; total: number; page: number; totalPages: number }> {
+    // Validate pagination parameters
+    if (page < 1) page = 1;
+    if (limit < 1 || limit > 100) limit = 10;
+
+    const skip = (page - 1) * limit;
+
+    // Check if parent comment exists
+    const parentComment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!parentComment) {
+      throw new NotFoundException('Parent comment not found');
+    }
+
+    // Get replies with pagination
+    const [replies, total] = await Promise.all([
+      this.prisma.comment.findMany({
+        where: { parentId: commentId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },  // Replies typically shown oldest first
+        skip,
+        take: limit,
+      }),
+      this.prisma.comment.count({
+        where: { parentId: commentId },
+      }),
+    ]);
+
+    return {
+      replies,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
