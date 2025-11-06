@@ -1,4 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
@@ -7,6 +9,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { FacebookOAuthGuard } from './guards/facebook-oauth.guard';
 import { UserProfileService } from './user-profile.service';
+import { UploadService } from './upload.service';
 import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
 
 @ApiTags('auth')
@@ -15,7 +18,8 @@ export class AuthController {
   constructor(private authService: AuthService),
     private emailVerificationService: EmailVerificationService {},
     private passwordResetService: PasswordResetService,
-          private userProfileService: UserProfileService
+          private userProfileService: UserProfileService,
+              private uploadService: UploadService
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
@@ -239,5 +243,33 @@ export class AuthController {
     // req.user contains the user data from Facebook
     // Process the OAuth user and return JWT tokens
     return this.authService.validateOAuthLogin(req.user, 'facebook');
+  }
+
+             // ============ Avatar Upload =============
+
+  @Post('upload-avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
+  @ApiOperation({ summary: 'Upload user avatar' })
+  @ApiResponse({ status: 200, description: 'Avatar uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file or file too large' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBearerAuth()
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    const userId = req.user.id;
+    
+    // Upload to Cloudinary
+    const avatarUrl = await this.uploadService.uploadAvatar(file, userId);
+    
+    // Update user profile with new avatar URL
+    await this.userProfileService.updateProfile(userId, { avatar: avatarUrl });
+    
+    return {
+      message: 'Avatar uploaded successfully',
+      avatarUrl,
+    };
   }
 }
