@@ -2,13 +2,15 @@ import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common'
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
+import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService),
-    private emailVerificationService: EmailVerificationService {}
+    private emailVerificationService: EmailVerificationService {},
+    private passwordResetService: PasswordResetService
 
   @Post('signup')
   @ApiOperation({ summary: 'Register a new user' })
@@ -72,5 +74,46 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Email already verified' })
   async resendVerification(@Body() body: { email: string }) {
     return this.emailVerificationService.resendVerificationEmail(body.email);
+  }
+
+  @Post('request-password-reset')
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({ status: 200, description: 'Password reset email sent (if account exists)' })
+  async requestPasswordReset(@Body() body: { email: string }) {
+    return this.passwordResetService.requestPasswordReset(body.email);
+  }
+
+  @Post('verify-reset-token')
+  @ApiOperation({ summary: 'Verify password reset token' })
+  @ApiResponse({ status: 200, description: 'Token is valid' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async verifyResetToken(@Body() body: { token: string }) {
+    return this.passwordResetService.verifyResetToken(body.token);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token or weak password' })
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.passwordResetService.resetPassword(body.token, body.newPassword);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password for authenticated user' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid current password' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changePassword(
+    @Request() req,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.passwordResetService.changePassword(
+      req.user.sub,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 }
