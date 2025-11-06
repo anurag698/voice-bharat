@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { UserProfileService } from './user-profile.service';
 import { UpdateProfileDto, UpdatePrivacySettingsDto } from './dto/update-profile.dto';
 
@@ -195,5 +196,26 @@ export class AuthController {
   async searchUsers(@Request() req) {
     const { query, limit = 20, offset = 0 } = req.query;
     return this.userProfileService.searchUsers(query as string, Number(limit), Number(offset));
+  }
+
+  // ============ Google OAuth ============
+
+  @Get('google')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth flow' })
+  @ApiResponse({ status: 302, description: 'Redirect to Google OAuth' })
+  async googleAuth() {
+    // Guard redirects to Google
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 401, description: 'Authentication failed' })
+  async googleAuthCallback(@Request() req) {
+    // req.user contains the user data from Google
+    // Process the OAuth user and return JWT tokens
+    return this.authService.validateOAuthLogin(req.user, 'google');
   }
 }
