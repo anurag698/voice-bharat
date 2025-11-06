@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReactionType } from '@prisma/client';
 
 // DTOs for Comment operations
 export class CreateCommentDto {
@@ -28,6 +29,11 @@ export class CommentResponseDto {
     firstName: string;
     lastName: string;
   };
+}
+
+  // DTO for adding reaction
+export class AddReactionDto {
+  type: ReactionType;
 }
 
 @Injectable()
@@ -415,5 +421,151 @@ export class CommentService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+    /**
+   * Add or update a reaction to a comment
+   */
+  async addReaction(
+    commentId: string,
+    userId: string,
+    addReactionDto: AddReactionDto,
+  ): Promise<{ message: string; reaction: any }> {
+    const { type } = addReactionDto;
+
+    // Check if comment exists
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    // Check if user already has this reaction type on this comment
+    const existingReaction = await this.prisma.commentReaction.findUnique({
+      where: {
+        commentId_userId_type: {
+          commentId,
+          userId,
+          type,
+        },
+      },
+    });
+
+    if (existingReaction) {
+      // User already reacted with this type, remove it (toggle behavior)
+      await this.prisma.commentReaction.delete({
+        where: { id: existingReaction.id },
+      });
+
+      // Decrement reaction count
+      await this.prisma.comment.update({
+        where: { id: commentId },
+        data: { reactionsCount: { decrement: 1 } },
+      });
+
+      return { message: 'Reaction removed', reaction: null };
+    }
+
+    // Create new reaction
+    const reaction = await this.prisma.commentReaction.create({
+      data: {
+        commentId,
+        userId,
+        type,
+      },
+    });
+
+    // Increment reaction count
+    await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { reactionsCount: { increment: 1 } },
+    });
+
+    return { message: 'Reaction added', reaction };
+  }
+
+  /**
+   * Get all reactions for a comment
+   */
+  async getCommentReactions(
+    commentId: string,
+  ): Promise<{ type: ReactionType; count: number; users: any[] }[]> {
+    // Check if comment exists
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    // Get all reactions grouped by type
+    const reactions = await this.prisma.commentReaction.findMany({
+      where: { commentId },
+      include: {
+        // We don't have user relation in CommentReaction, need to fetch separately
+      },
+    });
+
+    // Group reactions by type and count
+    const reactionSummary = reactions.reduce((acc, reaction) => {
+      const existing = acc.find((r) => r.type === reaction.type);
+      if (existing) {
+        existing.count++;
+        existing.userIds.push(reaction.userId);
+      } else {
+        acc.push({
+          type: reaction.type,
+          count: 1,
+          userIds: [reaction.userId],
+        });
+      }
+      return acc;
+    }, [] as { type: ReactionType; count: number; userIds: string[] }[]);
+
+    // Fetch user details for each reaction type
+    const result = await Promise.all(
+      reactionSummary.map(async (summary) => {
+        const users = await this.prisma.user.findMany({
+          where: { id: { in: summary.userIds } },
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+            firstName: true,
+            lastName: true,
+          },
+        });
+        return {
+          type: summary.type,
+          count: summary.count,
+          users,
+        };
+      }),
+    );
+
+    return result;
+  }
+
+  /**
+   * Check if user has reacted to a comment
+   */
+  async getUserReaction(
+    commentId: string,
+    userId: string,
+  ): Promise<ReactionType[]> {
+    const reactions = await this.prisma.commentReaction.findMany({
+      where: {
+        commentId,
+        userId,
+      },
+      select: {
+        type: true,
+      },
+    });
+
+    return reactions.map((r) => r.type);
   }
 }
