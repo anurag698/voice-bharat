@@ -2,10 +2,11 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaType, ReactionType } from '@prisma/client';
 import { HashtagService } from './hashtag.service';
+import { MentionService } from '../mention/mention.service';
 
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService, private hashtagService: HashtagService) {}
+  constructor(private prisma: PrismaService, private hashtagService: HashtagService), private mentionService: MentionService {}
 
   async getFeed(userId: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
@@ -133,6 +134,14 @@ export class PostService {
                           console.error('Failed to process hashtags:', err);
                         });
               }
+
+        // Extract and create mentions asynchronously (non-blocking)
+    if (data.content) {
+      this.mentionService.createPostMentions(post.id, data.content, userId).catch((err) => {
+        // Log error but don't fail post creation
+        console.error('Failed to process mentions:', err);
+      });
+    }
 
     // Award XP for creating post
     await this.prisma.user.update({
