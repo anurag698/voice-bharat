@@ -14,7 +14,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
-import { CommentService, CreateCommentDto, UpdateCommentDto, CommentResponseDto } from './comment.service';
+import { CommentService, CreateCommentDto, UpdateCommentDto, CommentResponseDto, AddReactionDto } from './comment.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('comments')
@@ -127,5 +127,40 @@ export class CommentController {
   ): Promise<{ hasCommented: boolean }> {
     const hasCommented = await this.commentService.hasUserCommented(postId, req.user.userId);
     return { hasCommented };
+  }
+
+    @Post(':commentId/reaction')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add/remove reaction to comment' })
+  @ApiParam({ name: 'commentId', description: 'Comment ID', type: String })
+  @ApiResponse({ status: 200, description: 'Reaction added/removed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid reaction type' })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async addReaction(
+    @Request() req,
+    @Param('commentId') commentId: string,
+    @Body() addReactionDto: AddReactionDto,
+  ): Promise<{ message: string }> {
+    return this.commentService.addReaction(commentId, req.user.userId, addReactionDto.type);
+  }
+
+  @Get(':commentId/reactions')
+  @ApiOperation({ summary: 'Get all reactions for a comment' })
+  @ApiParam({ name: 'commentId', description: 'Comment ID', type: String })
+  @ApiResponse({ status: 200, description: 'Reactions retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async getReactions(@Param('commentId') commentId: string) {
+    return this.commentService.getCommentReactions(commentId);
+  }
+
+  @Get(':commentId/reactions/me')
+  @ApiOperation({ summary: 'Get current user reactions on comment' })
+  @ApiParam({ name: 'commentId', description: 'Comment ID', type: String })
+  @ApiResponse({ status: 200, description: 'User reactions retrieved successfully' })
+  async getMyReactions(
+    @Request() req,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.commentService.getUserReaction(commentId, req.user.userId);
   }
 }
