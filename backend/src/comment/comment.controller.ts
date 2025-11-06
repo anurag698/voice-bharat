@@ -76,6 +76,21 @@ export class CommentController {
     return this.commentService.getCommentById(commentId);
   }
 
+    @Get(':commentId/replies')
+  @ApiOperation({ summary: 'Get all replies for a comment' })
+  @ApiParam({ name: 'commentId', description: 'Comment ID', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Replies per page (default: 20, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Comment replies retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Comment not found' })
+  async getCommentReplies(
+    @Param('commentId') commentId: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ) {
+    return this.commentService.getCommentReplies(commentId, page, limit);
+  }
+
   @Put(':commentId')
   @ApiOperation({ summary: 'Update a comment' })
   @ApiParam({ name: 'commentId', description: 'Comment ID', type: String })
