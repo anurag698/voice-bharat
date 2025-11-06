@@ -83,7 +83,7 @@ model Post {
   likesCount  Int        @default(0)
   commentsCount Int      @default(0)
   sharesCount Int        @default(0)
-  isPublic    Boolean    @default(true)
+  visibility    PostVisibility    @default(PUBLIC)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   
@@ -101,6 +101,13 @@ enum MediaType {
   VIDEO
   REEL
   STORY
+}
+
+// Post Visibility Enum
+enum PostVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
 }
 
 // Comment Model  
