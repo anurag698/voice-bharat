@@ -11,6 +11,7 @@ import { NotificationModule } from './notification/notification.module';
 import { FeedModule } from './feed/feed.module';
 import { CommentModule } from './comment/comment.module';
 import { LikeModule } from './like/like.module';
+import { FollowModule } from './follow/follow.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { LikeModule } from './like/like.module';
         FeedModule,
         CommentModule,
         LikeModule,
+        FollowModule,
     // More modules will be added here:
     // UserModule, PostModule, PollModule, NGOModule, MessageModule
   ],
