@@ -1,0 +1,30 @@
+{
+  "name": "VOCH Development Environment",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "prisma.prisma",
+        "ms-azuretools.vscode-docker",
+        "rangav.vscode-thunder-client",
+        "bradlc.vscode-tailwindcss",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      }
+    }
+  },
+  "forwardPorts": [3000, 5000, 5432, 6379, 27017, 7700, 9001],
+  "postCreateCommand": "cd backend && npm install && cd ../frontend && npm install",
+  "postStartCommand": "cd backend && npx prisma generate",
+  "remoteUser": "node"
+}
