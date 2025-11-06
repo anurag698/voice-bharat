@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards, Requ
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PostService } from './post.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreatePostDto, UpdatePostDto, CreateCommentDto } from './dto/post.dto';
+import { CreatePostDto, UpdatePostDto, CreateCommentDto, AddPostReactionDto } from './dto/post.dto';
 
 @ApiTags('posts')
 @Controller('posts')
@@ -86,5 +86,34 @@ export class PostController {
     @Body() createCommentDto: CreateCommentDto,
   ) {
     return this.postService.addComment(id, req.user.sub, createCommentDto.content);
+  }
+
+    @Post(':id/reaction')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add/remove reaction to post' })
+  @ApiResponse({ status: 200, description: 'Reaction added/removed' })
+  async addReaction(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() addPostReactionDto: AddPostReactionDto,
+  ) {
+    return this.postService.addPostReaction(id, req.user.sub, addPostReactionDto.type);
+  }
+
+  @Get(':id/reactions')
+  @ApiOperation({ summary: 'Get all reactions for a post' })
+  @ApiResponse({ status: 200, description: 'Reactions retrieved' })
+  async getReactions(@Param('id') id: string) {
+    return this.postService.getPostReactions(id);
+  }
+
+  @Get(':id/reactions/me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user reactions on post' })
+  @ApiResponse({ status: 200, description: 'User reactions retrieved' })
+  async getMyReactions(@Request() req, @Param('id') id: string) {
+    return this.postService.getUserPostReaction(id, req.user.sub);
   }
 }
