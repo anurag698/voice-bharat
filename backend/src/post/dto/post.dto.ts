@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsArray, IsEnum, MaxLength, MinLength, IsNotEmpty, IsUrl } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MediaType } from '@prisma/client';
+import { MediaType, ReactionType } from '@prisma/client';
 
 /**
  * DTO for creating a new post
@@ -107,4 +107,19 @@ export class CreateCommentDto {
   @IsOptional()
   @IsString()
   parentId?: string;
+}
+
+/**
+ * DTO for adding a reaction to a post
+ */
+export class AddPostReactionDto {
+  @ApiProperty({
+    description: 'The type of reaction to add',
+    enum: ReactionType,
+    example: 'LIKE',
+  })
+  @IsEnum(ReactionType, {
+    message: 'Reaction type must be one of: LIKE, LOVE, HAHA, WOW, SAD, ANGRY, CELEBRATE, SUPPORT',
+  })
+  type: ReactionType;
 }
